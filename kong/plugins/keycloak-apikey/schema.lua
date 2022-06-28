@@ -27,23 +27,23 @@ local schema = {
               }},
           { keycloak_client_id = {
               type = "string",
-              required = true
+              required = true,
+              referenceable = true,
               }},
           { keycloak_client_secret = {
               type = "string",
-              required = true
+              required = true,
+              referenceable = true,
               }},
           { keycloak_admin_username = {
               type = "string",
-              required = true
+              required = true,
+              referenceable = true,
               }},
           { keycloak_admin_password = {
               type = "string",
-              required = true
-              }},
-          { keycloak_token = {
-              type = "string",
-              required = false
+              required = true,
+              referenceable = true,
               }},
         },
         entity_checks = {
