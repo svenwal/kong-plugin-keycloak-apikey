@@ -52,7 +52,7 @@ local plugin = {
 
     local admin_api_url = plugin_conf.keycloak_base_url .. '/auth/admin/realms/' .. plugin_conf.keycloak_realm
     kong.log.debug("Fetching an admin token")
-    local token = get_admin_token(plugin_conf.keycloak_base_url, plugin_conf.keycloak_admin_realm, plugin_conf.keycloak_client_id, plugin_conf.keycloak_client_secret, plugin_conf.keycloak_admin_username)
+    local token = get_admin_token(plugin_conf.keycloak_base_url, plugin_conf.keycloak_admin_realm, plugin_conf.keycloak_client_id, plugin_conf.keycloak_client_secret, plugin_conf.keycloak_admin_username, plugin_conf.keycloak_admin_password)
 
     local http = require "resty.http"
     local httpc = http.new()
