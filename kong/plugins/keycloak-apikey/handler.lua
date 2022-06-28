@@ -30,11 +30,11 @@ local plugin = {
     local serialized_content, err = cjson.decode(res.body)
     if not serialized_content then
       kong.log.warn("Admin token creation failed due to non-parsable response from token endpoint")
-      return kong.response.exit(403, 'BODY NOT PARSABLE Invalid credentials')
+      return kong.response.exit(403, 'Invalid credentials')
     end
     if not serialized_content.access_token then
       kong.log.warn("Admin token creation failed due to no token embedded in response")
-      return kong.response.exit(403, 'BODY NOT PARSABLE Invalid credentials')
+      return kong.response.exit(403, 'Invalid credentials')
     end
     return serialized_content.access_token
   end
@@ -54,33 +54,8 @@ local plugin = {
     kong.log.debug("Fetching an admin token")
     local token = get_admin_token(plugin_conf.keycloak_base_url, "master", plugin_conf.keycloak_client_id, plugin_conf.keycloak_client_secret, plugin_conf.keycloak_admin_username, plugin_conf.keycloak_admin_password)
 
-    -- >>>>>> checking if the client id is known to Keycloak at all
-    -- TODO:
-    --  - do we even need to do this - the call to the client secret will fail anyway
-    --    disable for now (see do_precheck = false below)
-
     local http = require "resty.http"
     local httpc = http.new()
-
-    local do_precheck = false
-    if do_precheck then
-      local res, err = httpc:request_uri(admin_api_url .. "/clients/" .. apikey, {
-        method = "GET",
-        headers = {
-          ["Authorization"] = "Bearer " .. token,
-        },
-        keepalive_timeout = 60,
-        keepalive_pool = 10
-      })
-      if not res then
-        kong.log.info("Not able to get a response from the clients endpoint")
-        return kong.response.exit(403, 'Invalid credentials')
-      end 
-      if not res.status == 200 then
-        kong.log.info("Client not found - apikey not valid")
-        return kong.response.exit(403, 'Invalid credentials')
-      end
-    end
 
     -- >>>>>> getting the client secret
     local res, err = httpc:request_uri(admin_api_url .. "/clients/" .. apikey .. "/client-secret", {
