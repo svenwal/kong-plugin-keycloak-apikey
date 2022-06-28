@@ -23,3 +23,4 @@ The use case is about having a centralied storage for all users and application 
 
 * sensitive information on the admin account for token creation needs to be securely stored in a vault: https://docs.konghq.com/gateway/latest/pdk/kong.vault/
 * we need to add caching
+* so far the admin token creation is fixed to the master realm - need to validate on real world Keycloak setups
