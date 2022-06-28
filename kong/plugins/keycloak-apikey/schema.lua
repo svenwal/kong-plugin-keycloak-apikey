@@ -12,6 +12,11 @@ local schema = {
         -- The 'config' record is the custom part of the plugin schema
         type = "record",
         fields = {
+          { key_header_name = {
+              type = "string",
+              default = "apikey",
+              required = true
+              }},
           { keycloak_base_url = {
               type = "string",
               required = true
@@ -20,13 +25,25 @@ local schema = {
               type = "string",
               required = true
               }},
-          { keycloak_id = {
+          { keycloak_client_id = {
               type = "string",
               required = true
               }},
-          { keycloak_secret = {
+          { keycloak_client_secret = {
               type = "string",
               required = true
+              }},
+          { keycloak_admin_username = {
+              type = "string",
+              required = true
+              }},
+          { keycloak_admin_password = {
+              type = "string",
+              required = true
+              }},
+          { keycloak_token = {
+              type = "string",
+              required = false
               }},
         },
         entity_checks = {
