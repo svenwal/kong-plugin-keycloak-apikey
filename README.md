@@ -44,6 +44,7 @@ graph TD
 |config.keycloak_client_secret||The secret of the client being used to create an admin token (*referencable*)|
 |config.keycloak_admin_username||The admin username to create the admin token (*referencable*)|
 |config.keycloak_admin_password||The admin username to create the admin token (*referencable*)|
+|config.keycloak_admin_realm|master|The realm the admin user is registered at|
 
 ## Security notice
 
@@ -52,4 +53,3 @@ Sensitive information on the admin account for token creation can be securely st
 ## Known limitations / TBD
 
 * we need to add caching
-* so far the admin token creation is fixed to the master realm - need to validate on real world Keycloak setups

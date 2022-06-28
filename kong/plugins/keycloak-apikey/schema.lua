@@ -45,6 +45,11 @@ local schema = {
               required = true,
               referenceable = true,
               }},
+          { keycloak_admin_realm = {
+              type = "string",
+              default = "master",
+              required = true,
+           }},
         },
         entity_checks = {
         },
