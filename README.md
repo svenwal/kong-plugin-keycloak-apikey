@@ -6,7 +6,33 @@
 
 A Kong 🦍 plugin fetching an apikey and exchanging it to a JWT if a client with this ID exists in Keycloak.
 
-The use case is about having a centralied storage for all users and application in Keycloak. Even so Keycloak itself does not know about apikeys we can use client_ids instead. So plugin executes an admin api call (admin credentials needed!) to the Keycloak API validating a client_id exists in the given realm. If it gets a response it fetches the client secret to create a JWT for this client which afterwards can be validated (for example roles, groups, scopes) using the standard Kong OpenID Connect plugin
+The use case is about having a centralied storage for all users and application in Keycloak. Even so Keycloak itself does not know about apikeys we can use client_ids instead. So plugin executes an admin api call (admin credentials needed!) to the Keycloak API validating a client_id exists in the given realm. If it gets a response it fetches the client secret to create a JWT for this client which afterwards can be validated (for example roles, groups, scopes) using the standard Kong OpenID Connect plugin.
+
+```mermaid
+graph TD
+    A{Apikey in header}
+    A -->|No| B[Return 401]
+    A -->|Yes| C[Create an admin token]
+    C --> D
+    D --> C
+    C --> X{Got an admin token?}
+    X --> |No| Z
+    X --> |Yes| E
+    E --> F{Got a secret?}
+    F --> |No| Z
+    F --> |Yes| G[Execute client credentials flow to get a JWT]
+    G --> H{Got a token?}
+    H --> |No| Z
+    H --> |Yes| I[Attach token into the authorization header]
+    I --> J[OpenID Connect plugin validates the token]
+    E[Try to fetch the client secret]
+    E --> D
+    D --> E
+    G --> D
+    D --> G
+    D[Keycloak]
+    Z[Return a 401]
+```
 
 ## Configuration parameters
 |FORM PARAMETER|DEFAULT|DESCRIPTION|
