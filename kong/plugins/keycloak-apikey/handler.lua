@@ -87,11 +87,15 @@ local plugin = {
       return kong.response.exit(401, 'Invalid credentials')
     end
 
-    kong.log.debug(res.body)
+    if not serialized_content_id[1] then
+      kong.log.debug("We have not gotten a Keycloak Id for the client_id (no first entry in array)")         
+      return kong.response.exit(401, 'Invalid credentials') 
+    end
 
     local keycloak_id = serialized_content_id[1].id
+
     if not keycloak_id then
-      kong.log.debug("Token endpoint has not returned an access token in response") 
+      kong.log.debug("We have not gotten a Keycloak Id for the client_id (no id parameter in JSON)") 
       return kong.response.exit(401, 'Invalid credentials')
     end
 
