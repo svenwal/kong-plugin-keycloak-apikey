@@ -17,6 +17,11 @@ local schema = {
               default = "apikey",
               required = true
               }},
+         { return_unautorized_if_apikey_is_missing = {
+                type = "boolean",
+                default = true,
+                required = true
+                }},
           { keycloak_base_url = {
               type = "string",
               required = true
