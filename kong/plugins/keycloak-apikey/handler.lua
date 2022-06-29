@@ -57,8 +57,44 @@ local plugin = {
     local http = require "resty.http"
     local httpc = http.new()
 
+
+    -- >>>>>> looking up the client id in Keycloak and retrieving the Keycloak internal ID for it
+
+    local res, err = httpc:request_uri(admin_api_url .. "/clients/" {
+      method = "GET",
+      headers = {
+        ["Authorization"] = "Bearer " .. token,
+      },
+      query = {
+        clientId = apikey
+      }
+      keepalive_timeout = 60,
+      keepalive_pool = 10
+    })
+    if not res then
+      kong.log.info("Not able to get a response from the clients endpoint")
+      return kong.response.exit(403, 'Invalid credentials')
+    end 
+    if not res.status == 200 then
+      kong.log.info("Client not found - apikey not valid")
+      return kong.response.exit(403, 'Invalid credentials')
+    end
+   
+    local cjson = require("cjson.safe").new()
+    local serialized_content_id, err = cjson.decode(res.body)
+    if not serialized_content_id then
+      kong.log.debug("Clients endpoint has not returned parsable JSON") 
+      return kong.response.exit(401, 'Invalid credentials')
+    end
+
+    local keycloak_id = serialized_content_id[0].id
+    if not keycloak_id then
+      kong.log.debug("Token endpoint has not returned an access token in response") 
+      return kong.response.exit(401, 'Invalid credentials')
+    end
+
     -- >>>>>> getting the client secret
-    local res, err = httpc:request_uri(admin_api_url .. "/clients/" .. apikey .. "/client-secret", {
+    local res, err = httpc:request_uri(admin_api_url .. "/clients/" .. keycloak_id .. "/client-secret", {
       method = "GET",
       headers = {
         ["Authorization"] = "Bearer " .. token,
@@ -70,7 +106,7 @@ local plugin = {
       kong.log.debug("Cannot get the client secret - no response from /client-secret endpoint")
       return kong.response.exit(403, 'Invalid credentials')
     end 
-    local cjson = require("cjson.safe").new()
+  
 
     local serialized_content, err = cjson.decode(res.body)
     if not serialized_content then
@@ -97,11 +133,13 @@ local plugin = {
       kong.log.debug("Unable to access token endpoint")
       return kong.response.exit(401, 'Invalid credentials')
     end 
-    if not serialized_content then
+
+    local client_token, err = cjson.decode(res.body)
+    if not client_token then
       kong.log.debug("Token endpoint has not returned parsable JSON") 
       return kong.response.exit(401, 'Invalid credentials')
     end
-    local client_token, err = cjson.decode(res.body)
+
     if not client_token.access_token then
       kong.log.debug("Token endpoint has not returned an access token in response") 
       return kong.response.exit(401, 'Invalid credentials')
