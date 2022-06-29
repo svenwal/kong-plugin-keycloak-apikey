@@ -19,7 +19,7 @@ graph TD
     D --> C
     C --> X{Got an admin token?}
     X --> |No| Z
-    X --> |Yes| T[Exchange client_to Keycloak internal ID]
+    X --> |Yes| T[Exchange client_id Keycloak internal ID]
     T --> D
     D --> T
     T --> U{Exchange successful?}
