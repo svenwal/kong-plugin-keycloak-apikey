@@ -47,7 +47,12 @@ local plugin = {
     local apikey = kong.request.get_header(plugin_conf.key_header_name)
     if apikey == nil then
       kong.log.info("No token found in header " .. plugin_conf.key_header_name)
-      kong.response.exit(401, 'Authentication required')
+      if plugin_conf.return_unautorized_if_apikey_is_missing then
+        kong.response.exit(401, 'Authentication required')
+      else
+        kong.log.info("Parameter return_unautorized_if_apikey_is_missing is set to true so we will not deny the request")
+        return
+      end
     end
 
     local admin_api_url = plugin_conf.keycloak_base_url .. '/auth/admin/realms/' .. plugin_conf.keycloak_realm
