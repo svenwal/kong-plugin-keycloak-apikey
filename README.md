@@ -11,7 +11,7 @@ The use case is about having a centralied storage for all users and application 
 ```mermaid
 graph TD
     A{Apikey in header}
-    A --> V{config return_unautorized_if_apikey_is_missing}
+    A --> |No| V{config return_unautorized_if_apikey_is_missing}
     V --> |true| B[Return 403]
     V --> |false| XX[Stop plugin execution but do not deny request]
     A -->|Yes| C[Create an admin token]
