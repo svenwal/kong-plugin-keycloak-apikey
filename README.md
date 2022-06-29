@@ -11,13 +11,20 @@ The use case is about having a centralied storage for all users and application 
 ```mermaid
 graph TD
     A{Apikey in header}
-    A -->|No| B[Return 401]
+    A --> V{config return_unautorized_if_apikey_is_missing}
+    V --> |true| B[Return 403]
+    V --> |false| XX[Stop plugin execution but do not deny request]
     A -->|Yes| C[Create an admin token]
     C --> D
     D --> C
     C --> X{Got an admin token?}
     X --> |No| Z
-    X --> |Yes| E
+    X --> |Yes| T[Exchange client_to Keycloak internal ID]
+    T --> D
+    D --> T
+    T --> U{Exchange successful?}
+    U --> |Yes| E
+    U --> |No| Z
     E --> F{Got a secret?}
     F --> |No| Z
     F --> |Yes| G[Execute client credentials flow to get a JWT]
@@ -38,7 +45,7 @@ graph TD
 |FORM PARAMETER|DEFAULT|DESCRIPTION|
 |:----|:------|:------|
 |config.key_header_name|apikey|The header where the apikey will be sent|
-|return_unautorized_if_apikey_is_missing|true|If set a missing apikey will result in a 401 response - if set to false we will progress the next plugins anyway|
+|config.return_unautorized_if_apikey_is_missing|true|If set to true a missing apikey will result in a 401 response - if set to false we will progress the next plugins anyway|
 |config.keycloak_base_url||Base URL of Keycloak like https://my.keycloak.example.com. NOTE: If using a SSL endpoint make sure the certificate is trusted in the Kong setting `lua_ssl_trusted_certificate`|
 |config.keycloak_realm||The realm the plugin should use to look up the client|
 |config.keycloak_client_id||The client being used to create an admin token (*referencable*)|
