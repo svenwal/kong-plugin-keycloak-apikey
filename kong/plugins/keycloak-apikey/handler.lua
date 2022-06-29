@@ -60,14 +60,14 @@ local plugin = {
 
     -- >>>>>> looking up the client id in Keycloak and retrieving the Keycloak internal ID for it
 
-    local res, err = httpc:request_uri(admin_api_url .. "/clients/" {
+    local res, err = httpc:request_uri(admin_api_url .. "/clients/", {
       method = "GET",
       headers = {
         ["Authorization"] = "Bearer " .. token,
       },
       query = {
         clientId = apikey
-      }
+      },
       keepalive_timeout = 60,
       keepalive_pool = 10
     })
@@ -87,7 +87,9 @@ local plugin = {
       return kong.response.exit(401, 'Invalid credentials')
     end
 
-    local keycloak_id = serialized_content_id[0].id
+    kong.log.debug(res.body)
+
+    local keycloak_id = serialized_content_id[1].id
     if not keycloak_id then
       kong.log.debug("Token endpoint has not returned an access token in response") 
       return kong.response.exit(401, 'Invalid credentials')
