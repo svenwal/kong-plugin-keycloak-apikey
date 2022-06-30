@@ -1,6 +1,6 @@
 local plugin = {
     PRIORITY = 1010, -- set the plugin priority, which determines plugin execution order
-    VERSION = "0.4",
+    VERSION = "0.9",
   }
   
   function plugin:access(plugin_conf)
@@ -17,21 +17,22 @@ local plugin = {
     end
 
     -- >>>>>> checking if client token is cached - if not execute validate_apikey to fetch it
+    local str = require "resty.string"
     local token_cache_key = "keycloakapikey_" .. str.to_hex(plugin_conf.keycloak_base_url .. "_" .. plugin_conf.keycloak_admin_realm)
     local opts = { ttl = plugin_conf.token_ttl }
-    local token, err = kong.cache:get(token_cache_key, opts, validate_apikey, plugin_conf)
+    local token, err = kong.cache:get(token_cache_key, opts, validate_apikey, plugin_conf, apikey)
     if err then
       kong.log.err(err)
     end
-    ttl, err, value = kong.cache:probe(token_cache_key)
-    kong.log.debug(ttl)    
+
+    kong.service.request.add_header("Authorization", "Bearer " .. token)
 
   end
 
 
 
   -- ******** Apikey code checking starts here
-  function validate_apikey(plugin_conf)
+  function validate_apikey(plugin_conf, apikey)
     -- >> Generating admin token if not already cached
     local str = require "resty.string"
     kong.log.debug("Loading the admin token")
@@ -41,8 +42,6 @@ local plugin = {
     if err then
       kong.log.err(err)
     end
-    ttl, err, value = kong.cache:probe(admin_cache_key)
-    kong.log.debug(ttl)
 
     local http = require "resty.http"
     local httpc = http.new()
@@ -141,7 +140,7 @@ local plugin = {
       return kong.response.exit(401, 'Invalid credentials')
     end
     kong.log.debug("We got a valid apikey and have exchanged it to a token")
-    kong.service.request.add_header("Authorization", "Bearer " .. client_token.access_token)
+    return client_token.access_token
   end 
 
 
