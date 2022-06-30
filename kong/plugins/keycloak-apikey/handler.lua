@@ -2,44 +2,6 @@ local plugin = {
     PRIORITY = 1010, -- set the plugin priority, which determines plugin execution order
     VERSION = "0.4",
   }
-
-
-  -- ******* Fetching an admin token so we can get the clients secret later on
-  -- TODO:
-  --  - caching
-  --  - other flow than password flow!?
-
-  function get_admin_token(keycloak_base_url, keycloak_realm, client_id, client_secret, admin_username, admin_password) 
-    local http = require "resty.http"
-    local httpc = http.new()
-    local res, err = httpc:request_uri(keycloak_base_url .. "/auth/realms/" .. keycloak_realm .. "/protocol/openid-connect/token", {
-       method = "POST",
-      body = "grant_type=password&client_id=" .. client_id .. "&client_secret=" .. client_secret .. "&username=" .. admin_username .. "&password=" .. admin_password,
-       headers = {
-         ["Content-Type"] = "application/x-www-form-urlencoded",
-       },
-     })
-
-    if not res then
-      kong.log.warn("Not able to access token endpoint for admin token creation")
-      return kong.response.exit(403, 'Invalid credentials')
-    end 
-    local cjson = require("cjson.safe").new()
-
-    local serialized_content, err = cjson.decode(res.body)
-    if not serialized_content then
-      kong.log.warn("Admin token creation failed due to non-parsable response from token endpoint")
-      return kong.response.exit(403, 'Invalid credentials')
-    end
-    if not serialized_content.access_token then
-      kong.log.warn("Admin token creation failed due to no token embedded in response")
-      return kong.response.exit(403, 'Invalid credentials')
-    end
-    return serialized_content.access_token
-  end
-
-
-  -- ******** Actual plugin code starts here
   
   function plugin:access(plugin_conf)
     -- >>>>>> checking if we got an apikey at all
@@ -54,17 +16,28 @@ local plugin = {
       end
     end
 
-    local admin_api_url = plugin_conf.keycloak_base_url .. '/auth/admin/realms/' .. plugin_conf.keycloak_realm
-
-    -- >>>>>>> Checking if we have the token cached already
-    local str = require "resty.string"
+    -- >>>>>> checking if client token is cached - if not execute validate_apikey to fetch it
     local token_cache_key = "keycloakapikey_" .. str.to_hex(plugin_conf.keycloak_base_url .. "_" .. plugin_conf.keycloak_admin_realm)
-    
+    local opts = { ttl = plugin_conf.token_ttl }
+    local token, err = kong.cache:get(token_cache_key, opts, validate_apikey, plugin_conf)
+    if err then
+      kong.log.err(err)
+    end
+    ttl, err, value = kong.cache:probe(token_cache_key)
+    kong.log.debug(ttl)    
 
+  end
+
+
+
+  -- ******** Apikey code checking starts here
+  function validate_apikey(plugin_conf)
+    -- >> Generating admin token if not already cached
+    local str = require "resty.string"
     kong.log.debug("Loading the admin token")
     local admin_cache_key = "keycloakapikeyadmin_" .. str.to_hex(plugin_conf.keycloak_client_id .. "_" .. plugin_conf.keycloak_admin_username .. "_" .. plugin_conf.keycloak_base_url .. "_" .. plugin_conf.keycloak_admin_realm)
-    local opts = { ttl = 50 }
-    local token, err = kong.cache:get(admin_cache_key, opts, get_admin_token, plugin_conf.keycloak_base_url, plugin_conf.keycloak_admin_realm, plugin_conf.keycloak_client_id, plugin_conf.keycloak_client_secret, plugin_conf.keycloak_admin_username, plugin_conf.keycloak_admin_password)
+    local opts = { ttl = plugin_conf.keycloak_admin_token_ttl }
+    local admin_token, err = kong.cache:get(admin_cache_key, opts, get_admin_token, plugin_conf)
     if err then
       kong.log.err(err)
     end
@@ -73,14 +46,14 @@ local plugin = {
 
     local http = require "resty.http"
     local httpc = http.new()
-
-
+    local admin_api_url = plugin_conf.keycloak_base_url .. '/auth/admin/realms/' .. plugin_conf.keycloak_realm
+  
     -- >>>>>> looking up the client id in Keycloak and retrieving the Keycloak internal ID for it
 
     local res, err = httpc:request_uri(admin_api_url .. "/clients/", {
       method = "GET",
       headers = {
-        ["Authorization"] = "Bearer " .. token,
+        ["Authorization"] = "Bearer " .. admin_token,
       },
       query = {
         clientId = apikey
@@ -120,7 +93,7 @@ local plugin = {
     local res, err = httpc:request_uri(admin_api_url .. "/clients/" .. keycloak_id .. "/client-secret", {
       method = "GET",
       headers = {
-        ["Authorization"] = "Bearer " .. token,
+        ["Authorization"] = "Bearer " .. admin_token,
       },
       keepalive_timeout = 60,
       keepalive_pool = 10
@@ -170,5 +143,42 @@ local plugin = {
     kong.log.debug("We got a valid apikey and have exchanged it to a token")
     kong.service.request.add_header("Authorization", "Bearer " .. client_token.access_token)
   end 
+
+
+
+
+
+  -- ******* Fetching an admin token so we can get the clients secret later on
+
+
+  function get_admin_token(plugin_conf) 
+
+    local http = require "resty.http"
+    local httpc = http.new()
+    local res, err = httpc:request_uri(plugin_conf.keycloak_base_url .. "/auth/realms/" .. plugin_conf.keycloak_admin_realm .. "/protocol/openid-connect/token", {
+       method = "POST",
+      body = "grant_type=password&client_id=" .. plugin_conf.keycloak_client_id .. "&client_secret=" .. plugin_conf.keycloak_client_secret .. "&username=" .. plugin_conf.keycloak_admin_username .. "&password=" .. plugin_conf.keycloak_admin_password,
+       headers = {
+         ["Content-Type"] = "application/x-www-form-urlencoded",
+       },
+     })
+
+    if not res then
+      kong.log.warn("Not able to access token endpoint for admin token creation")
+      return kong.response.exit(403, 'Invalid credentials')
+    end 
+    local cjson = require("cjson.safe").new()
+
+    local serialized_content, err = cjson.decode(res.body)
+    if not serialized_content then
+      kong.log.warn("Admin token creation failed due to non-parsable response from token endpoint")
+      return kong.response.exit(403, 'Invalid credentials')
+    end
+    if not serialized_content.access_token then
+      kong.log.warn("Admin token creation failed due to no token embedded in response")
+      return kong.response.exit(403, 'Invalid credentials')
+    end
+    return serialized_content.access_token
+  end
   
   return plugin

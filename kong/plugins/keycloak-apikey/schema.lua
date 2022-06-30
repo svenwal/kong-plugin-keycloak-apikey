@@ -30,6 +30,11 @@ local schema = {
               type = "string",
               required = true
               }},
+          { token_ttl = {
+              type = "integer",
+              default = 50,
+              required = true
+            }},
           { keycloak_client_id = {
               type = "string",
               required = true,
@@ -55,6 +60,11 @@ local schema = {
               default = "master",
               required = true,
            }},
+           { keycloak_admin_token_ttl = {
+            type = "integer",
+            default = 50,
+            required = true,
+         }},
         },
         entity_checks = {
         },
