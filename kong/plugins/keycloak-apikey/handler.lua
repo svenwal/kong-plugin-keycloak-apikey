@@ -8,7 +8,6 @@ local plugin = {
   -- TODO:
   --  - caching
   --  - other flow than password flow!?
-  --  - so far using the master realm based on my personal Keycloak setup. Would be better to use the same realm as the client
 
   function get_admin_token(keycloak_base_url, keycloak_realm, client_id, client_secret, admin_username, admin_password) 
     local http = require "resty.http"
@@ -56,8 +55,21 @@ local plugin = {
     end
 
     local admin_api_url = plugin_conf.keycloak_base_url .. '/auth/admin/realms/' .. plugin_conf.keycloak_realm
-    kong.log.debug("Fetching an admin token")
-    local token = get_admin_token(plugin_conf.keycloak_base_url, plugin_conf.keycloak_admin_realm, plugin_conf.keycloak_client_id, plugin_conf.keycloak_client_secret, plugin_conf.keycloak_admin_username, plugin_conf.keycloak_admin_password)
+
+    -- >>>>>>> Checking if we have the token cached already
+    local str = require "resty.string"
+    local token_cache_key = "keycloakapikey_" .. str.to_hex(plugin_conf.keycloak_base_url .. "_" .. plugin_conf.keycloak_admin_realm)
+    
+
+    kong.log.debug("Loading the admin token")
+    local admin_cache_key = "keycloakapikeyadmin_" .. str.to_hex(plugin_conf.keycloak_client_id .. "_" .. plugin_conf.keycloak_admin_username .. "_" .. plugin_conf.keycloak_base_url .. "_" .. plugin_conf.keycloak_admin_realm)
+    local opts = { ttl = 50 }
+    local token, err = kong.cache:get(admin_cache_key, opts, get_admin_token, plugin_conf.keycloak_base_url, plugin_conf.keycloak_admin_realm, plugin_conf.keycloak_client_id, plugin_conf.keycloak_client_secret, plugin_conf.keycloak_admin_username, plugin_conf.keycloak_admin_password)
+    if err then
+      kong.log.err(err)
+    end
+    ttl, err, value = kong.cache:probe(admin_cache_key)
+    kong.log.debug(ttl)
 
     local http = require "resty.http"
     local httpc = http.new()
