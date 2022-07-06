@@ -18,7 +18,7 @@ local plugin = {
 
     -- >>>>>> checking if client token is cached - if not execute validate_apikey to fetch it
     local str = require "resty.string"
-    local token_cache_key = "keycloakapikey_" .. str.to_hex(plugin_conf.keycloak_base_url .. "_" .. plugin_conf.keycloak_admin_realm)
+    local token_cache_key = "keycloakapikey_" .. str.to_hex(plugin_conf.keycloak_base_url .. "_" .. plugin_conf.keycloak_admin_realm .. "_" .. apikey)
     local opts = { ttl = plugin_conf.token_ttl }
     local token, err = kong.cache:get(token_cache_key, opts, validate_apikey, plugin_conf, apikey)
     if err then
@@ -164,6 +164,9 @@ local plugin = {
 
     if not res then
       kong.log.warn("Not able to access token endpoint for admin token creation")
+      kong.log.warn("Tried url " .. plugin_conf.keycloak_base_url .. "/auth/realms/" .. plugin_conf.keycloak_admin_realm .. "/protocol/openid-connect/token")
+      kong.log.warn("Tried POST body: grant_type=password&client_id=" .. plugin_conf.keycloak_client_id .. "&client_secret=xxxx&username=" .. plugin_conf.keycloak_admin_username .. "&password=xxx") 
+      kong.log.warn(err)
       return kong.response.exit(403, 'Invalid credentials')
     end 
     local cjson = require("cjson.safe").new()
