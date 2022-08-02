@@ -1,7 +1,5 @@
 # Kong plugin validation an apikey against client_id in Keycloak
 
-!!! Work in progress
-
 ## About
 
 A Kong 🦍 plugin fetching an apikey and exchanging it to a JWT if a client with this ID exists in Keycloak.
@@ -23,7 +21,7 @@ graph TD
     D --> C
     C --> X{Got an admin token?}
     X --> |No| Z
-    X --> |Yes| T[Exchange client_id Keycloak internal ID]
+    X --> |Yes| T[Exchange client_id to Keycloak internal ID]
     T --> D
     D --> T
     T --> U{Exchange successful?}
@@ -64,6 +62,3 @@ graph TD
 
 Sensitive information on the admin account for token creation can be securely stored in a vault: https://docs.konghq.com/gateway/latest/pdk/kong.vault/. See the (*referencable*) notice on the paramaters
 
-## Known limitations / TBD
-
-* we need to add caching
